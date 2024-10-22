@@ -87,12 +87,6 @@ struct ScrollImageViewExample: View {
     @StateObject var vm = PhotoViewModel()
     @State private var currentIndex: Int = 0
     
-    let requestOptions: PHImageRequestOptions = {
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
-        return options
-    }()
-    
     let targetSize = CGSize(width: 1024, height: 1024)
     
     var body: some View {
