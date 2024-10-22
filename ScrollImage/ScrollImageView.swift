@@ -82,6 +82,9 @@ class PhotoViewModel: ObservableObject {
     }
 }
 
+// 缓冲图片数量
+let bufferNum: Int = 1
+
 /// - ScrollImageViw 使用示例
 struct ScrollImageViewExample: View {
     @StateObject var vm = PhotoViewModel()
@@ -96,8 +99,6 @@ struct ScrollImageViewExample: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
-                        .cornerRadius(10)
-                        .padding(.horizontal, 5)
                 } else {
                     Color.clear
                         .onAppear {
@@ -112,19 +113,26 @@ struct ScrollImageViewExample: View {
                 }
             }
         }
+        //.frame(width: 40)
+        //.background(.black)
+        //.frame(maxWidth: .infinity, maxHeight: .infinity)
+        //.background(.blue.opacity(0.3))
+        //.background(.black)
         .navigationTitle("我的照片")
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .top) {
             pageView()
         }
         .onChange(of: currentIndex) { _, newIndex in
-            if newIndex >= 2 {
-                vm.photos[newIndex - 2].uiImage = nil
-                print("卸载索引\(newIndex - 2)")
+            // 卸载屏幕左侧缓冲区以外的图片
+            if newIndex >= 1 + bufferNum {
+                vm.photos[newIndex - (1 + bufferNum)].uiImage = nil
+                print("卸载索引\(newIndex - (1 + bufferNum))")
             }
-            if newIndex <= vm.photos.count - 3 {
-                vm.photos[newIndex + 2].uiImage = nil
-                print("卸载索引\(newIndex + 2)")
+            // 卸载屏幕右侧缓冲区以外的图片
+            if newIndex <= vm.photos.count - (2 + bufferNum) {
+                vm.photos[newIndex + (1 + bufferNum)].uiImage = nil
+                print("卸载索引\(newIndex + (1 + bufferNum))")
             }
         }
     }
@@ -142,7 +150,6 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
     let list: [T]
     @Binding var currentIndex: Int
     @State private var offset: CGSize = .zero
-    @State private var direction: Direction = .none
     
     var content: (T) -> Content
     
@@ -152,10 +159,6 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
         self.content = content
     }
     
-    /// - 手势方向
-    enum Direction {
-        case h, v, none
-    }
     
     var body: some View {
         GeometryReader {
@@ -166,51 +169,33 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
                     DragGesture()
                         .onChanged({ value in
                             let trans = value.translation
-                            if direction == .none {
-                                direction = abs(trans.width) > abs(trans.height) ? .h : .v
-                            }
-                            
-                            if direction == .h {
-                                offset = CGSize(width: trans.width, height: 0)
-                            } else if direction == .v {
-                                offset = CGSize(width: 0, height: trans.height)
-                            }
+                            offset = CGSize(width: trans.width, height: 0)
                         })
                         .onEnded({ value in
-                            let pageSize = direction == .h ? size.width : size.height
-                            let translation = direction == .h ? value.translation.width : value.translation.height
+                            let pageSize = size.width
+                            let translation = value.translation.width
                             
                             /// - 值为负数时表示向上或向左滑动，值为正数时表示向下或向右滑动
                             let dir = Int(translation / abs(translation))
                             
                             if abs(translation) > pageSize * 0.1 && !isAtBoundary(dir: dir) {
                                 let newOffset = CGSize(
-                                    width: direction == .h ? CGFloat(dir) * pageSize : 0,
-                                    height: direction == .v ? CGFloat(dir) * pageSize : 0
+                                    width: CGFloat(dir) * pageSize,
+                                    height: 0
                                 )
                                 
                                 withAnimation(.interactiveSpring) {
                                     offset = newOffset
                                 } completion: {
-                                    if direction == .h {
-                                        if translation < 0 {
-                                            currentIndex = max(min(currentIndex + 1, list.count - 1), 0)
-                                        } else {
-                                            currentIndex = max(min(currentIndex - 1, list.count - 1), 0)
-                                        }
+                                    if translation < 0 {
+                                        currentIndex = max(min(currentIndex + 1, list.count - 1), 0)
                                     } else {
-                                        if translation < 0 {
-                                            currentIndex = max(min(currentIndex + 1, list.count - 1), 0)
-                                        } else {
-                                            currentIndex = max(min(currentIndex - 1, list.count - 1), 0)
-                                        }
+                                        currentIndex = max(min(currentIndex - 1, list.count - 1), 0)
                                     }
-                                    direction = .none
                                 }
                             } else {
                                 withAnimation(.interactiveSpring) {
                                     offset = .zero
-                                    direction = .none
                                 }
                             }
                         })
@@ -242,27 +227,38 @@ struct AxisCurrentPageView<Content: View, T: Identifiable>: View {
     }
     
     var body: some View {
-        Color.clear
-            .overlay(alignment: .center) {
+        GeometryReader {
+            let size = $0.size
+            
+            ZStack {
+                /**
+                 getPage(pageIndex: currentIndex - 2)
+                 .offset(x: -size.width*2)
+                 getPage(pageIndex: currentIndex - 1)
+                 .offset(x: -size.width)
+                 getPage(pageIndex: currentIndex)
+                 getPage(pageIndex: currentIndex + 1)
+                 .offset(x: size.width)
+                 getPage(pageIndex: currentIndex + 2)
+                 .offset(x: size.width*2)
+                 */
+                
+                // 屏幕左侧缓冲图片区
+                ForEach((1...bufferNum).reversed(), id: \.self) { index in
+                    getPage(pageIndex: currentIndex - index)
+                        .offset(x: -size.width*CGFloat(index))
+                }
+                
+                // 当前图片
                 getPage(pageIndex: currentIndex)
+                
+                // 屏幕右侧图片缓冲区
+                ForEach(1...bufferNum, id: \.self) { index in
+                    getPage(pageIndex: currentIndex + index)
+                        .offset(x: size.width*CGFloat(index))
+                }
             }
-            .overlay(alignment: .top) {
-                getPage(pageIndex: currentIndex - 1)
-                    .alignmentGuide(.top) { $0[.bottom]}
-            }
-            .overlay(alignment: .bottom) {
-                getPage(pageIndex: currentIndex + 1)
-                    .alignmentGuide(.bottom) { $0[.top]}
-            }
-            .overlay(alignment: .leading) {
-                getPage(pageIndex: currentIndex - 1)
-                    .alignmentGuide(.leading) { $0[.trailing]}
-            }
-            .overlay(alignment: .trailing) {
-                getPage(pageIndex: currentIndex + 1)
-                    .alignmentGuide(.trailing) { $0[.leading]}
-            }
-            .contentShape(Rectangle())
+        }
     }
     
     /// - 根据索引获取页面
