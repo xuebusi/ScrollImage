@@ -12,7 +12,6 @@
 		2B1ACA762C488D4400C771D8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B1ACA752C488D4400C771D8 /* Assets.xcassets */; };
 		2B1ACA792C488D4400C771D8 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2B1ACA782C488D4400C771D8 /* Preview Assets.xcassets */; };
 		2B1ACA802C488D5400C771D8 /* ScrollImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B1ACA7F2C488D5400C771D8 /* ScrollImageView.swift */; };
-		2B43AD0A2CC8123500DFB045 /* SwiftUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B43AD092CC8123500DFB045 /* SwiftUIView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,7 +21,6 @@
 		2B1ACA752C488D4400C771D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2B1ACA782C488D4400C771D8 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		2B1ACA7F2C488D5400C771D8 /* ScrollImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollImageView.swift; sourceTree = "<group>"; };
-		2B43AD092CC8123500DFB045 /* SwiftUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,7 +58,6 @@
 				2B1ACA7F2C488D5400C771D8 /* ScrollImageView.swift */,
 				2B1ACA752C488D4400C771D8 /* Assets.xcassets */,
 				2B1ACA772C488D4400C771D8 /* Preview Content */,
-				2B43AD092CC8123500DFB045 /* SwiftUIView.swift */,
 			);
 			path = ScrollImage;
 			sourceTree = "<group>";
@@ -145,7 +142,6 @@
 			files = (
 				2B1ACA742C488D4300C771D8 /* ContentView.swift in Sources */,
 				2B1ACA802C488D5400C771D8 /* ScrollImageView.swift in Sources */,
-				2B43AD0A2CC8123500DFB045 /* SwiftUIView.swift in Sources */,
 				2B1ACA722C488D4300C771D8 /* ScrollImageApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
