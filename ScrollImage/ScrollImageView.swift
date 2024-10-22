@@ -6,37 +6,138 @@
 //
 
 import SwiftUI
+import Photos
+
+struct Photo: Identifiable, Hashable {
+    var id: String { localIdentifier }
+    var localIdentifier: String
+    var asset: PHAsset
+    var uiImage: UIImage?
+    
+    init(asset: PHAsset) {
+        self.localIdentifier = asset.localIdentifier
+        self.asset = asset
+    }
+}
+
+class PhotoViewModel: ObservableObject {
+    @Published var photos: [Photo] = []
+    
+    private lazy var requestOptions: PHImageRequestOptions = {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.isSynchronous = false
+        options.isNetworkAccessAllowed = true
+        return options
+    }()
+    
+    init() {
+        requestPhotoLibraryAccess()
+    }
+    
+    private func requestPhotoLibraryAccess() {
+        PHPhotoLibrary.requestAuthorization { status in
+            if status == .authorized || status == .limited {
+                self.fetchPhotos()
+            }
+        }
+    }
+    
+    func fetchPhotos() {
+        let assets = fetchAssets()
+        for asset in assets {
+            // 检查是否已经存在相同的localIdentifier
+            if !photos.contains(where: { $0.localIdentifier == asset.localIdentifier }) {
+                /**
+                 通过DispatchQueue.main.asyncAfter延迟执行，可以有效缓解内存飙升的现象，
+                 因为这给系统和ARC机制更多时间来回收内存，同时避免了主线程频繁刷新UI的高负载。
+                 这种技巧在处理大量数据初始化或大规模UI更新时非常实用，能显著提升应用的性能和稳定性。
+                 */
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self.photos.append(Photo(asset: asset))
+                }
+            }
+        }
+    }
+    
+    private func fetchAssets() -> [PHAsset] {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        
+        // 获取资源
+        let fetchResult = PHAsset.fetchAssets(with: fetchOptions)
+        let assets = fetchResult.objects(at: IndexSet(integersIn: 0..<fetchResult.count))
+        return assets
+    }
+    
+    func loadImage(from asset: PHAsset, size: CGSize, completion: @escaping (UIImage?) -> Void) {
+        let options = PHImageRequestOptions()
+        options.isSynchronous = false
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .opportunistic
+        
+        PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFit, options: options) { image, _ in
+            completion(image)
+        }
+    }
+}
 
 /// - ScrollImageViw 使用示例
 struct ScrollImageViewExample: View {
-    @State private var movies: [Movie] = []
+    @StateObject var vm = PhotoViewModel()
     @State private var currentIndex: Int = 0
     
-    struct Movie: Identifiable {
-        var id = UUID().uuidString
-        var poster: String
-    }
+    let requestOptions: PHImageRequestOptions = {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        return options
+    }()
+    
+    let targetSize = CGSize(width: 1024, height: 1024)
     
     var body: some View {
-        ScrollImageView(list: movies, currentIndex: $currentIndex) { movie in
-            Image(movie.poster)
-                .resizable()
-                .scaledToFit()
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .clipped()
+        ScrollImageView(list: vm.photos, currentIndex: $currentIndex) { photo in
+            Group {
+                if let uiImage = photo.uiImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .cornerRadius(10)
+                        .padding(.horizontal, 5)
+                } else {
+                    Color.clear
+                        .onAppear {
+                            vm.loadImage(from: photo.asset, size: targetSize) { uiImage in
+                                if let uiImage = uiImage {
+                                    if let index = vm.photos.firstIndex(where: { $0.id == photo.id }) {
+                                        vm.photos[index].uiImage = uiImage
+                                    }
+                                }
+                            }
+                        }
+                }
+            }
         }
-        .onAppear {
-            self.movies = (1...8).map{Movie(poster: "m\($0)")}
-        }
+        .navigationTitle("我的照片")
+        .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .top) {
             pageView()
+        }
+        .onChange(of: currentIndex) { _, newIndex in
+            if newIndex >= 2 {
+                vm.photos[newIndex - 2].uiImage = nil
+                print("卸载索引\(newIndex - 2)")
+            }
+            if newIndex <= vm.photos.count - 3 {
+                vm.photos[newIndex + 2].uiImage = nil
+                print("卸载索引\(newIndex + 2)")
+            }
         }
     }
     
     /// - 页码
     private func pageView() -> some View {
-        Text("第 \(currentIndex + 1) / \(movies.count) 页")
+        Text("\(currentIndex) / \(vm.photos.count - 1)")
             .font(.headline)
             .padding(.bottom, 50)
     }
@@ -88,7 +189,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
                             /// - 值为负数时表示向上或向左滑动，值为正数时表示向下或向右滑动
                             let dir = Int(translation / abs(translation))
                             
-                            if abs(translation) > pageSize * 0.3 && !isAtBoundary(dir: dir) {
+                            if abs(translation) > pageSize * 0.1 && !isAtBoundary(dir: dir) {
                                 let newOffset = CGSize(
                                     width: direction == .h ? CGFloat(dir) * pageSize : 0,
                                     height: direction == .v ? CGFloat(dir) * pageSize : 0
@@ -113,7 +214,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
                                     direction = .none
                                 }
                             } else {
-                                withAnimation(.interactiveSpring()) {
+                                withAnimation(.interactiveSpring) {
                                     offset = .zero
                                     direction = .none
                                 }
