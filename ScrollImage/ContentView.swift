@@ -9,7 +9,14 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        ScrollImageViewExample()
+        NavigationStack {
+            NavigationLink {
+                ScrollImageViewExample()
+            } label: {
+                Text("查看照片")
+            }
+            .navigationTitle("首页")
+        }
     }
 }
 
