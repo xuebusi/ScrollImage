@@ -150,6 +150,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
     let list: [T]
     @Binding var currentIndex: Int
     @State private var offset: CGSize = .zero
+    private var animation: Animation = .spring(response: 0.25, dampingFraction: 1, blendDuration: 0)
     
     var content: (T) -> Content
     
@@ -165,6 +166,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
             let size = $0.size
             AxisCurrentPageView(list: list, currentIndex: $currentIndex, content: content)
                 .offset(x: offset.width, y: offset.height)
+                .contentShape(.rect)
                 .gesture(
                     DragGesture()
                         .onChanged({ value in
@@ -184,7 +186,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
                                     height: 0
                                 )
                                 
-                                withAnimation(.interactiveSpring) {
+                                withAnimation(animation) {
                                     offset = newOffset
                                 } completion: {
                                     if translation < 0 {
@@ -194,7 +196,7 @@ struct ScrollImageView<Content: View, T: Identifiable>: View {
                                     }
                                 }
                             } else {
-                                withAnimation(.interactiveSpring) {
+                                withAnimation(animation) {
                                     offset = .zero
                                 }
                             }
